@@ -4,7 +4,7 @@ using TestCards.Models;
 
 namespace TestCards.Services
 {
-    public interface ICreditCardApplicationRepository
+    public interface ICreditCardData
     {
         Task AddAsync(CreditCardApplication application);
     }
