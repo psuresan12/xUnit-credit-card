@@ -1,6 +1,8 @@
 ﻿using System;
 using TestCards.Models;
+using TestCards.Services;
 using Xunit;
+using Moq;
 
 namespace unittests.Models
 {
@@ -9,21 +11,30 @@ namespace unittests.Models
         private const int ExpectedLowIncomeThreshhold = 20_000;
         private const int ExpectedHighIncomeThreshhold = 100_000;
 
+        private readonly Mock<IFrequentFlyerNumberValidator> _mockValidator;
+        private readonly CreditCardApplicationEvaluator _sut;
+
+        public CreditCardApplicationEvaluatorShould()
+        {
+            _mockValidator = new Mock<IFrequentFlyerNumberValidator>();
+            _mockValidator.Setup(x => x.IsValid(It.IsAny<string>())).Returns(true);
+
+            _sut = new CreditCardApplicationEvaluator(_mockValidator.Object);
+        }
+
         [Theory]
         [InlineData(ExpectedHighIncomeThreshhold)]
         [InlineData(ExpectedHighIncomeThreshhold + 1)]
         [InlineData(int.MaxValue)]
         public void AcceptAllHighIncomeApplicants(int income)
         {
-            var sut = new CreditCardApplicationEvaluator();
-
             var application = new CreditCardApplication
             {
                 GrossAnnualIncome = income
             };
 
             Assert.Equal(CreditCardApplicationDecision.CreditCardApplicationDecisionType.AutoAccepted,
-                sut.Evaluate(application));
+                _sut.Evaluate(application));
         }
 
 
@@ -36,8 +47,6 @@ namespace unittests.Models
         [InlineData(int.MinValue)]
         public void ReferYoungApplicantsWhoAreNotHighIncome(int age)
         {
-            var sut = new CreditCardApplicationEvaluator();
-
             var application = new CreditCardApplication
             {
                 GrossAnnualIncome = ExpectedHighIncomeThreshhold - 1,
@@ -45,7 +54,7 @@ namespace unittests.Models
             };
 
             Assert.Equal(CreditCardApplicationDecision.CreditCardApplicationDecisionType.ReferredToHuman,
-                sut.Evaluate(application));
+                _sut.Evaluate(application));
         }
 
 
@@ -55,16 +64,14 @@ namespace unittests.Models
         [InlineData(ExpectedHighIncomeThreshhold - 1)]
         public void ReferNonYoungApplicantsWhoAreMiddleIncome(int income)
         {
-            var sut = new CreditCardApplicationEvaluator();
-
-            var application = new CreditCardApplication
+           var application = new CreditCardApplication
             {
                 GrossAnnualIncome = income,
                 Age = 21
             };
 
             Assert.Equal(CreditCardApplicationDecision.CreditCardApplicationDecisionType.ReferredToHuman,
-                sut.Evaluate(application));
+                _sut.Evaluate(application));
         }
 
 
@@ -74,16 +81,26 @@ namespace unittests.Models
         [InlineData(int.MinValue)]
         public void DeclineAllApplicantsWhoAreLowIncome(int income)
         {
-            var sut = new CreditCardApplicationEvaluator();
-
-            var application = new CreditCardApplication
+           var application = new CreditCardApplication
             {
                 GrossAnnualIncome = income,
                 Age = 21
             };
 
             Assert.Equal(CreditCardApplicationDecision.CreditCardApplicationDecisionType.AutoDeclined,
-                sut.Evaluate(application));
+                _sut.Evaluate(application));
+        }
+
+        [Fact]
+        public void ReferInvalidFrequentFlyerNumbers(){
+           _mockValidator.Setup(x => x.IsValid(It.IsAny<string>())).Returns(false);
+            var application = new CreditCardApplication();
+            Assert.Equal(CreditCardApplicationDecision.CreditCardApplicationDecisionType.ReferredToHuman,
+               _sut.Evaluate(application));
+
+            //check how many time the method is called
+            _mockValidator.Verify(x => x.IsValid(It.IsAny<string>()), Times.Once);
         }
     }
 }
+ 

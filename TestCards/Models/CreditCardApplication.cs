@@ -8,5 +8,6 @@ namespace TestCards.Models
         public string LastName { get; set; }
         public int Age { get; set; }
         public decimal GrossAnnualIncome { get; set; }
+        public string FrequentFlyerNumber { get; set; }
     }
 }
